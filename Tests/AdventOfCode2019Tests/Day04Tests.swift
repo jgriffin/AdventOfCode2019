@@ -5,7 +5,6 @@
 //  Created by John Griffin on 12/30/19.
 //
 
-@testable import Advent2019
 import Foundation
 import XCTest
 
@@ -24,7 +23,7 @@ import XCTest
 // 123789 does not meet these criteria (no double).
 // How many different passwords within the range given in your puzzle input meet these criteria?
 
-final class Day4Tests: XCTestCase {
+final class Day04Tests: XCTestCase {
     func testExamples() {
         let tests: [(n: Int, check: Bool)] = [
             (n: 111_111, check: true),

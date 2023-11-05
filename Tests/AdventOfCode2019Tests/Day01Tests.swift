@@ -7,10 +7,9 @@
 
 import Foundation
 
-@testable import Advent2019
 import XCTest
 
-final class Day1Tests: XCTestCase {
+final class Day01Tests: XCTestCase {
     func fuelForMass(_ mass: Int) -> Int {
         mass / 3 - 2
     }
@@ -91,7 +90,7 @@ final class Day1Tests: XCTestCase {
     }
 
     private func puzzleInput() -> String {
-        return """
+        """
         66690
         86239
         75191
