@@ -27,76 +27,76 @@ import XCTest
 final class Day4Tests: XCTestCase {
     func testExamples() {
         let tests: [(n: Int, check: Bool)] = [
-            (n: 111111, check: true),
-            (n: 223450, check: false),
-            (n: 123789, check: false),
+            (n: 111_111, check: true),
+            (n: 223_450, check: false),
+            (n: 123_789, check: false),
         ]
-        
+
         tests.forEach { test in
             let result = meetsRules(test.n)
             XCTAssertEqual(result, test.check)
         }
     }
-    
+
     func testFindPasswordsInRange() {
-        let passwords = (372304...847060).filter(meetsRules)
+        let passwords = (372_304 ... 847_060).filter(meetsRules)
         XCTAssertEqual(passwords.count, 475)
     }
-    
+
     func testExamplesExcluding() {
         let tests: [(n: Int, check: Bool)] = [
-            (n: 112233, check: true),
-            (n: 123444, check: false),
-            (n: 111122, check: true),
+            (n: 112_233, check: true),
+            (n: 123_444, check: false),
+            (n: 111_122, check: true),
         ]
-        
+
         tests.forEach { test in
             let result = meetsRulesExcludingGroups(test.n)
             XCTAssertEqual(result, test.check)
         }
     }
-    
+
     func testFindPasswordsInRangeExcludingRules() {
-        let passwords = (372304...847060).filter(meetsRulesExcludingGroups)
+        let passwords = (372_304 ... 847_060).filter(meetsRulesExcludingGroups)
         XCTAssertEqual(passwords.count, 297)
     }
-    
+
     func meetsRules(_ n: Int) -> Bool {
         let digits = digitsOf(n)
         guard zip(digits, digits.dropFirst()).allSatisfy({ $0 <= $1 }) else { return false }
         guard zip(digits, digits.dropFirst()).contains(where: { $0 == $1 }) else { return false }
         return true
     }
-    
+
     func meetsRulesExcludingGroups(_ n: Int) -> Bool {
         let digits = digitsOf(n)
         guard zip(digits, digits.dropFirst()).allSatisfy({ $0 <= $1 }) else {
             return false
         }
-        
+
         var hasAdjacent = false
         var adjacentGroup = (n: digits.first!, count: 1)
-        
+
         for d in digits.dropFirst() {
             guard d == adjacentGroup.n else {
                 if adjacentGroup.count == 2 {
                     hasAdjacent = true
                 }
-                
+
                 adjacentGroup = (d, 1)
                 continue
             }
-            
+
             adjacentGroup.count += 1
         }
-        
+
         if adjacentGroup.count == 2 {
             hasAdjacent = true
         }
-        
+
         return hasAdjacent
     }
-    
+
     func digitsOf(_ n: Int) -> [Int] {
         var result = [Int]()
         var n = n

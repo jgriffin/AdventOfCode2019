@@ -18,7 +18,7 @@ final class Day1Tests: XCTestCase {
     func fuelForMassRecursive(_ mass: Int) -> Int {
         let fuel = fuelForMass(mass)
         guard fuel > 0 else { return 0 }
-        
+
         return fuel + fuelForMassRecursive(fuel)
     }
 
@@ -49,7 +49,7 @@ final class Day1Tests: XCTestCase {
             (12, 2),
             (14, 2),
             (1969, 654),
-            (100756, 33583)
+            (100_756, 33583),
         ]
         tests.forEach { test in
             XCTAssertEqual(fuelForMass(test.mass), test.check)
@@ -59,7 +59,7 @@ final class Day1Tests: XCTestCase {
     func testPart1() {
         let input = puzzleInput().split(separator: "\n").map { Int($0)! }
         let result = input.map { fuelForMass($0) }.reduce(0, +)
-        XCTAssertEqual(result, 3331849)
+        XCTAssertEqual(result, 3_331_849)
     }
 
     //
@@ -77,7 +77,7 @@ final class Day1Tests: XCTestCase {
         let tests: [(mass: Int, check: Int)] = [
             (14, 2),
             (1969, 966),
-            (100756, 50346)
+            (100_756, 50346),
         ]
         tests.forEach { test in
             XCTAssertEqual(fuelForMassRecursive(test.mass), test.check)
@@ -87,7 +87,7 @@ final class Day1Tests: XCTestCase {
     func testPart2() {
         let input = puzzleInput().split(separator: "\n").map { Int($0)! }
         let result = input.map { fuelForMassRecursive($0) }.reduce(0, +)
-        XCTAssertEqual(result, 4994898)
+        XCTAssertEqual(result, 4_994_898)
     }
 
     private func puzzleInput() -> String {

@@ -75,25 +75,24 @@ final class Day2Tests: XCTestCase {
     // Once you have a working computer, the first step is to restore the gravity assist program (your puzzle input) to the "1202 program alarm" state it had just before the last computer caught fire. To do this, before running the program, replace position 1 with the value 12 and replace position 2 with the value 2. What value is left at position 0 after the program halts?
     func test1() {
         let result = run(input: puzzleInput(), noun: 12, verb: 2)
-        XCTAssertEqual(result, 3850704)
+        XCTAssertEqual(result, 3_850_704)
     }
 
     func test2Example() {
-        let result = findNounVerb(input: puzzleInput(), target: 3850704)
+        let result = findNounVerb(input: puzzleInput(), target: 3_850_704)
         XCTAssertEqual(result.noun, 12)
         XCTAssertEqual(result.verb, 2)
     }
-    
+
     func test2() {
-        let result = findNounVerb(input: puzzleInput(), target: 19690720)
+        let result = findNounVerb(input: puzzleInput(), target: 19_690_720)
         XCTAssertEqual(result.noun, 67)
         XCTAssertEqual(result.verb, 18)
     }
 
-
     func findNounVerb(input: [Int], target: Int) -> (noun: Int, verb: Int) {
-        for noun in 0...99 {
-            for verb in 0...99 {
+        for noun in 0 ... 99 {
+            for verb in 0 ... 99 {
                 if run(input: input, noun: noun, verb: verb) == target {
                     return (noun: noun, verb: verb)
                 }
