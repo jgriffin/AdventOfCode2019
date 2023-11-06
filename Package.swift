@@ -22,6 +22,7 @@ let package = Package(
             name: "AdventOfCode2019",
             dependencies: [
                 .product(name: "Algorithms", package: "swift-algorithms"),
+                .product(name: "Parsing", package: "swift-parsing"),
             ]
         ),
         .testTarget(

@@ -2,7 +2,7 @@
 // Created by John Griffin on 11/4/23
 //
 
-import Foundation
+import Parsing
 
 // An Intcode program is a list of integers separated by commas (like 1,0,0,3,99). To run one, start by looking at the first integer (called position 0). Here, you will find an opcode - either 1, 2, or 99. The opcode indicates what to do; for example, 99 means that the program is finished and should immediately halt. Encountering an unknown opcode means something went wrong.
 //
@@ -13,56 +13,54 @@ import Foundation
 // Opcode 2 works exactly like opcode 1, except it multiplies the two inputs instead of adding them. Again, the three integers after the opcode indicate where the inputs and outputs are, not their values.
 //
 // Once you're done processing an opcode, move to the next one by stepping forward 4 positions.
-public struct OpCode {
-    let value: Int
-    
-    public init(_ value: Int) {
-        self.value = value
-    }
-    
-    public var op: Operation {
-        guard let op = Operation(rawValue: value % 100) else { fatalError("invalid oppcode") }
-        return op
-    }
-
-    public var isImmediate1: Bool { (value / 100 % 10) == 1 }
-    public var isImmediate2: Bool { (value / 1000 % 10) == 1 }
-
-    public enum Operation: Int {
-        case add = 1
-        case multiply = 2
-        case input = 3
-        case output = 4
-        case halt = 99
-        
-        public var length: Int {
-            switch self {
-            case .add: 4
-            case .multiply: 4
-            case .input: 2
-            case .output: 2
-            case .halt: 1
-            }
-        }
-    }
-}
-
 public struct IntcodeComputer {
     public let input: () -> Int
-    public let output: (Int) -> Void
+    public var output: [Int] = []
+
     public var state: [Int]
     public var ip: Int = 0
-        
+    public var debug: Bool
+
     init(
         program: [Int],
         input: @escaping () -> Int,
-        output: @escaping (Int) -> Void
+        debug: Bool = false
     ) {
         self.state = program
         self.input = input
-        self.output = output
+        self.debug = debug
     }
-        
+
+    // MARK: - convenience accessors
+
+    private mutating func setLocation(_ location: Int, value: Int) {
+        dbgPrint("set: \(location) = \(value)\n")
+        state[location] = value
+    }
+
+    var currentOpCode: OpCode { OpCode(state[ip]) }
+    var parameter1: Int { state[ip+1] }
+    var parameter2: Int { state[ip+2] }
+    var parameter3: Int { state[ip+3] }
+
+    func resolve(_ parameter: Int, isImmediate: Bool) -> Int {
+        isImmediate ? parameter : state[parameter]
+    }
+
+    public var result: Int { state[0] }
+
+    public func dbgPrint(_ items: Any..., separator: String = " ", terminator: String = "\n") {
+        guard debug else { return }
+        print(items, separator: separator, terminator: terminator)
+    }
+
+    enum RuntimeError: Error {
+        case invalidOpcode(location: Int, value: Int)
+        case halted
+    }
+
+    // MARK: - run
+
     /**
      create an run program
      */
@@ -70,60 +68,145 @@ public struct IntcodeComputer {
         program: [Int],
         noun: Int? = nil,
         verb: Int? = nil,
-        input: @escaping () -> Int = { fatalError() },
-        output: @escaping (Int) -> Void = { _ in fatalError() }
+        input: @escaping () -> Int = { fatalError() }
     ) throws -> Self {
-        var computer = IntcodeComputer(program: program, input: input, output: output)
+        var computer = IntcodeComputer(program: program, input: input)
         if let noun {
             computer.state[1] = noun
         }
         if let verb {
             computer.state[2] = verb
         }
-        try computer.runUntilHalt()
-        return computer
-    }
-        
-    /// run until halt
-    mutating func runUntilHalt() throws {
-        var intcode = OpCode(state[ip])
-        while intcode.op != .halt {
-            processOpCode(intcode)
-                
-            ip += intcode.op.length
-            intcode = OpCode(state[ip])
-        }
-    }
-        
-    func parameter1(_ opCode: OpCode) -> Int {
-        opCode.isImmediate1 ? state[ip + 1] : state[state[ip + 1]]
-    }
 
-    func parameter2(_ opCode: OpCode) -> Int {
-        opCode.isImmediate2 ? state[ip + 2] : state[state[ip + 2]]
-    }
-        
-    func parameter3(_ opcode: OpCode) -> Int {
-        state[ip + 3]
+        while true {
+            do {
+                try computer.step()
+            } catch RuntimeError.halted {
+                break
+            }
+        }
+
+        return computer
     }
 
     /// process one OpCode
-    mutating func processOpCode(_ opCode: OpCode) {
-        switch opCode.op {
+    mutating func step() throws {
+        let opCode = currentOpCode
+        dbgPrint("\(ip):", "opCode", opCode.value)
+
+        switch opCode.operation {
         case .add:
-            state[parameter3(opCode)] = parameter1(opCode) + parameter2(opCode)
+            let (p1, p2, p3) = (
+                resolve(parameter1, isImmediate: opCode.isImmediate1),
+                resolve(parameter2, isImmediate: opCode.isImmediate2),
+                parameter3
+            )
+            setLocation(p3, value: p1+p2)
+            ip += 4
+
         case .multiply:
-            state[parameter3(opCode)] = parameter1(opCode) * parameter2(opCode)
+            let (p1, p2, p3) = (
+                resolve(parameter1, isImmediate: opCode.isImmediate1),
+                resolve(parameter2, isImmediate: opCode.isImmediate2),
+                parameter3
+            )
+            setLocation(p3, value: p1 * p2)
+            ip += 4
+
         case .input:
-            state[state[ip + 1]] = input()
+            let p1 = parameter1
+            let result = input()
+            setLocation(p1, value: result)
+            ip += 2
+
         case .output:
-            output(state[ip + 1])
+            let p1 = resolve(parameter1, isImmediate: opCode.isImmediate1)
+            dbgPrint("out: \(p1)\n")
+            output.append(p1)
+            ip += 2
+
+        case .jumpIfTrue:
+            let (p1, p2) = (
+                resolve(parameter1, isImmediate: opCode.isImmediate1),
+                resolve(parameter2, isImmediate: opCode.isImmediate2)
+            )
+            if p1 != 0 {
+                ip = p2
+            } else {
+                ip += 3
+            }
+
+        case .jumpIfFalse:
+            let (p1, p2) = (
+                resolve(parameter1, isImmediate: opCode.isImmediate1),
+                resolve(parameter2, isImmediate: opCode.isImmediate2)
+            )
+            if p1 == 0 {
+                ip = p2
+            } else {
+                ip += 3
+            }
+
+        case .lessThan:
+            let (p1, p2, p3) = (
+                resolve(parameter1, isImmediate: opCode.isImmediate1),
+                resolve(parameter2, isImmediate: opCode.isImmediate2),
+                parameter3
+            )
+            setLocation(p3, value: p1 < p2 ? 1 : 0)
+            ip += 4
+
+        case .equals:
+            let (p1, p2, p3) = (
+                resolve(parameter1, isImmediate: opCode.isImmediate1),
+                resolve(parameter2, isImmediate: opCode.isImmediate2),
+                parameter3
+            )
+            setLocation(p3, value: p1 == p2 ? 1 : 0)
+            ip += 4
+
         case .halt:
-            fatalError("doesn't get handled here")
+            throw RuntimeError.halted
         }
     }
-        
-    enum RuntimeError: Error {
-        case invalidOpcode(location: Int, value: Int)
+}
+
+extension IntcodeComputer {}
+
+public extension IntcodeComputer {
+    struct OpCode {
+        let value: Int
+        let operation: Operation
+
+        public init(_ value: Int) {
+            self.value = value
+            guard let op = Operation(rawValue: value % 100) else { fatalError("invalid opCode") }
+            self.operation = op
+        }
+
+        public enum Operation: Int {
+            case add = 1
+            case multiply = 2
+            case input = 3
+            case output = 4
+            case jumpIfTrue = 5
+            case jumpIfFalse = 6
+            case lessThan = 7
+            case equals = 8
+            case halt = 99
+        }
+
+        public var isImmediate1: Bool { ((value / 100) % 10) == 1 }
+        public var isImmediate2: Bool { ((value / 1000) % 10) == 1 }
+    }
+}
+
+public extension IntcodeComputer {
+    static let programParser = Parse(input: Substring.self) {
+        Many { Int.parser() } separator: { "," }
+        Skip {
+            Optionally { "\n" }
+            End()
+        }
     }
 }
