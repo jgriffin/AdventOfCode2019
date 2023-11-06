@@ -5,8 +5,8 @@
 //  Created by John Griffin on 12/27/19.
 //
 
+import AdventOfCode2019
 import Foundation
-
 import XCTest
 
 // On the way to your gravity assist around the Moon, your ship computer beeps angrily about a "1202 program alarm". On the radio, an Elf is already explaining how to handle the situation: "Don't worry, that's perfectly norma--" The ship computer bursts into flames.
@@ -55,7 +55,7 @@ import XCTest
 // Once you have a working computer, the first step is to restore the gravity assist program (your puzzle input) to the "1202 program alarm" state it had just before the last computer caught fire. To do this, before running the program, replace position 1 with the value 12 and replace position 2 with the value 2. What value is left at position 0 after the program halts?
 
 final class Day02Tests: XCTestCase {
-    func testExamples1() {
+    func testExamples1() throws {
         let tests: [(input: [Int], check: [Int])] = [
             (input: [1, 0, 0, 0, 99], check: [2, 0, 0, 0, 99]),
             (input: [2, 3, 0, 3, 99], check: [2, 3, 0, 6, 99]),
@@ -64,35 +64,45 @@ final class Day02Tests: XCTestCase {
             (input: [1, 9, 10, 3, 2, 3, 11, 0, 99, 30, 40, 50], check: [3500, 9, 10, 70, 2, 3, 11, 0, 99, 30, 40, 50]),
         ]
 
-        tests.forEach { test in
-            var state = test.input
-            run(state: &state)
-            XCTAssertEqual(state, test.check)
+        try tests.forEach { test in
+            let computer = try IntcodeComputer.run(program: test.input)
+            XCTAssertEqual(computer.state, test.check)
         }
     }
 
     // Once you have a working computer, the first step is to restore the gravity assist program (your puzzle input) to the "1202 program alarm" state it had just before the last computer caught fire. To do this, before running the program, replace position 1 with the value 12 and replace position 2 with the value 2. What value is left at position 0 after the program halts?
-    func test1() {
-        let result = run(input: puzzleInput(), noun: 12, verb: 2)
-        XCTAssertEqual(result, 3_850_704)
+    func test1() throws {
+        let computer = try IntcodeComputer.run(
+            program: puzzleInput(),
+            noun: 12,
+            verb: 2
+        )
+        XCTAssertEqual(computer.state[0], 3_850_704)
     }
 
     func test2Example() {
-        let result = findNounVerb(input: puzzleInput(), target: 3_850_704)
+        let program = puzzleInput()
+        let result = findNounVerb(program: program, target: 3_850_704)
         XCTAssertEqual(result.noun, 12)
         XCTAssertEqual(result.verb, 2)
     }
 
     func test2() {
-        let result = findNounVerb(input: puzzleInput(), target: 19_690_720)
+        let program = puzzleInput()
+        let result = findNounVerb(program: program, target: 19_690_720)
         XCTAssertEqual(result.noun, 67)
         XCTAssertEqual(result.verb, 18)
     }
 
-    func findNounVerb(input: [Int], target: Int) -> (noun: Int, verb: Int) {
+    func findNounVerb(program: [Int], target: Int) -> (noun: Int, verb: Int) {
         for noun in 0 ... 99 {
             for verb in 0 ... 99 {
-                if run(input: input, noun: noun, verb: verb) == target {
+                let computer = try! IntcodeComputer.run(
+                    program: program,
+                    noun: noun,
+                    verb: verb
+                )
+                if computer.state[0] == target {
                     return (noun: noun, verb: verb)
                 }
             }
@@ -100,44 +110,57 @@ final class Day02Tests: XCTestCase {
         fatalError()
     }
 
-    func run(input: [Int], noun: Int, verb: Int) -> Int {
-        var state = input
-        state[1] = noun
-        state[2] = verb
-
-        run(state: &state)
-
-        let result = state[0]
-        return result
-    }
-
-    // An Intcode program is a list of integers separated by commas (like 1,0,0,3,99). To run one, start by looking at the first integer (called position 0). Here, you will find an opcode - either 1, 2, or 99. The opcode indicates what to do; for example, 99 means that the program is finished and should immediately halt. Encountering an unknown opcode means something went wrong.
-    //
-    // Opcode 1 adds together numbers read from two positions and stores the result in a third position. The three integers immediately after the opcode tell you these three positions - the first two indicate the positions from which you should read the input values, and the third indicates the position at which the output should be stored.
-    //
-    // For example, if your Intcode computer encounters 1,10,20,30, it should read the values at positions 10 and 20, add those values, and then overwrite the value at position 30 with their sum.
-    //
-    // Opcode 2 works exactly like opcode 1, except it multiplies the two inputs instead of adding them. Again, the three integers after the opcode indicate where the inputs and outputs are, not their values.
-    //
-    // Once you're done processing an opcode, move to the next one by stepping forward 4 positions.
-    func run(state: inout [Int]) {
-        var current = 0
-
-        while state[current] != 99 {
-            let (first, second, output) = (state[current + 1], state[current + 2], state[current + 3])
-
-            switch state[current] {
-            case 1:
-                state[output] = state[first] + state[second]
-            case 2:
-                state[output] = state[first] * state[second]
-            case 99: fatalError()
-            default: fatalError()
-            }
-
-            current += 4
-        }
-    }
+//
+//    func run(input: [Int], noun: Int, verb: Int) -> Int {
+//        var state = input
+//        state[1] = noun
+//        state[2] = verb
+//
+//        run(state: &state)
+//
+//        let result = state[0]
+//        return result
+//    }
+//
+//    // An Intcode program is a list of integers separated by commas (like 1,0,0,3,99). To run one, start by looking at the first integer (called position 0). Here, you will find an opcode - either 1, 2, or 99. The opcode indicates what to do; for example, 99 means that the program is finished and should immediately halt. Encountering an unknown opcode means something went wrong.
+//    //
+//    // Opcode 1 adds together numbers read from two positions and stores the result in a third position. The three integers immediately after the opcode tell you these three positions - the first two indicate the positions from which you should read the input values, and the third indicates the position at which the output should be stored.
+//    //
+//    // For example, if your Intcode computer encounters 1,10,20,30, it should read the values at positions 10 and 20, add those values, and then overwrite the value at position 30 with their sum.
+//    //
+//    // Opcode 2 works exactly like opcode 1, except it multiplies the two inputs instead of adding them. Again, the three integers after the opcode indicate where the inputs and outputs are, not their values.
+//    //
+//    // Once you're done processing an opcode, move to the next one by stepping forward 4 positions.
+//    func run(state: inout [Int]) {
+//        var current = 0
+//
+//        while let opCode = OpCode(rawValue: state[current]) {
+//            guard opCode != .halt else {
+//                return
+//            }
+//
+//            let (first, second, output) = (state[current + 1], state[current + 2], state[current + 3])
+//
+//            switch opCode {
+//            case .add:
+//                state[output] = state[first] + state[second]
+//            case .multiply:
+//                state[output] = state[first] * state[second]
+//            case .halt:
+//                fatalError()
+//            }
+//
+//            current += 4
+//        }
+//
+//        fatalError()
+//    }
+//
+//    enum OpCode: Int {
+//        case add = 1
+//        case multiply = 2
+//        case halt = 00
+//    }
 
     func puzzleInput() -> [Int] {
         [1, 0, 0, 3, 1, 1, 2, 3, 1, 3, 4, 3, 1, 5, 0, 3, 2, 13, 1, 19, 1, 6, 19, 23, 2, 23, 6, 27, 1, 5, 27, 31, 1, 10, 31, 35, 2, 6, 35, 39, 1, 39, 13, 43, 1, 43, 9, 47, 2, 47, 10, 51, 1, 5, 51, 55, 1, 55, 10, 59, 2, 59, 6, 63, 2, 6, 63, 67, 1, 5, 67, 71, 2, 9, 71, 75, 1, 75, 6, 79, 1, 6, 79, 83, 2, 83, 9, 87, 2, 87, 13, 91, 1, 10, 91, 95, 1, 95, 13, 99, 2, 13, 99, 103, 1, 103, 10, 107, 2, 107, 10, 111, 1, 111, 9, 115, 1, 115, 2, 119, 1, 9, 119, 0, 99, 2, 0, 14, 0]
